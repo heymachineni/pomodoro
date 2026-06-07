@@ -29,6 +29,24 @@
   const keyboardPrimary = window.matchMedia("(pointer: fine)").matches;
   document.documentElement.classList.toggle("touch-primary", touchPrimary);
 
+  const portraitLayoutMq = window.matchMedia(
+    "(orientation: portrait) and (pointer: coarse)"
+  );
+
+  function isBottomLayout() {
+    return portraitLayoutMq.matches;
+  }
+
+  function syncLayoutMode() {
+    document.documentElement.dataset.timeline = isBottomLayout() ? "bottom" : "side";
+  }
+
+  syncLayoutMode();
+  portraitLayoutMq.addEventListener("change", () => {
+    syncLayoutMode();
+    paintTimeline(true);
+  });
+
   /** @type {"idle"|"running"|"paused"} */
   let mode = "idle";
   let durationMs = 0;
@@ -196,7 +214,13 @@
     const next = cur + delta;
 
     if (next < MIN_MINUTES || next > MAX_MINUTES) {
-      body.dataset.bump = delta > 0 ? "up" : "down";
+      body.dataset.bump = isBottomLayout()
+        ? delta > 0
+          ? "right"
+          : "left"
+        : delta > 0
+          ? "up"
+          : "down";
       haptic(8);
       setTimeout(() => {
         if (body.dataset.bump) delete body.dataset.bump;
@@ -255,6 +279,8 @@
     const activeTick = /** @type {HTMLElement} */ (ticks[active]);
     if (!activeTick) return;
 
+    const bottom = isBottomLayout();
+
     if (immediate) trackEl.style.transition = "none";
     else
       trackEl.style.transition =
@@ -267,27 +293,32 @@
       el.classList.toggle("active", isActive);
 
       if (isActive) {
-        el.style.setProperty("--w", "36px");
+        el.style.setProperty("--len", "36px");
         el.style.setProperty("--o", "1");
         el.style.setProperty("--s", "1");
       } else {
         const t = Math.min(dist / 6, 1);
-        el.style.setProperty("--w", `${(28 - t * 14).toFixed(1)}px`);
+        el.style.setProperty("--len", `${(28 - t * 14).toFixed(1)}px`);
         el.style.setProperty("--o", (0.85 - t * 0.78).toFixed(3));
         el.style.setProperty("--s", (1 - t * 0.28).toFixed(3));
       }
     }
 
     if (active === 0) {
-      tlabel.textContent = "Scroll to set timer";
+      tlabel.textContent = bottom ? "Swipe to set timer" : "Scroll to set timer";
       tlabel.classList.add("is-hint");
     } else {
       tlabel.textContent = String(active).padStart(2, "0");
       tlabel.classList.remove("is-hint");
     }
 
-    const tickCenter = activeTick.offsetTop + activeTick.offsetHeight / 2;
-    trackEl.style.transform = `translateY(${-tickCenter}px)`;
+    const tickCenter = bottom
+      ? activeTick.offsetLeft + activeTick.offsetWidth / 2
+      : activeTick.offsetTop + activeTick.offsetHeight / 2;
+
+    trackEl.style.transform = bottom
+      ? `translateX(${-tickCenter}px)`
+      : `translateY(${-tickCenter}px)`;
 
     if (immediate) {
       void trackEl.offsetHeight;
@@ -346,14 +377,17 @@
       if (now - wheelLast > 220) wheelAcc = 0;
       wheelLast = now;
 
-      const dy = e.deltaY;
-      if (Math.abs(dy) >= 80) {
-        adjust(dy < 0 ? +1 : -1);
+      const bottom = isBottomLayout();
+      const primary = bottom ? -e.deltaX : -e.deltaY;
+      if (bottom && Math.abs(e.deltaX) < Math.abs(e.deltaY) * 0.55) return;
+
+      if (Math.abs(primary) >= 80) {
+        adjust(primary > 0 ? +1 : -1);
         wheelAcc = 0;
         return;
       }
 
-      wheelAcc += -dy;
+      wheelAcc += primary;
       while (wheelAcc >= WHEEL_THRESHOLD) {
         adjust(+1);
         wheelAcc -= WHEEL_THRESHOLD;
@@ -387,6 +421,18 @@
     const x = e.touches[0].clientX;
     const dy = touchStartY - y;
     const dx = x - touchStartX;
+
+    if (isBottomLayout()) {
+      if (Math.abs(dy) > Math.abs(dx) * 1.4) return;
+      const steps = Math.trunc(dx / SWIPE_STEP) - touchAccum;
+      if (steps !== 0) {
+        const dir = steps > 0 ? +1 : -1;
+        for (let i = 0; i < Math.abs(steps); i++) adjust(dir);
+        touchAccum += steps;
+      }
+      return;
+    }
+
     if (Math.abs(dx) > Math.abs(dy) * 1.4) return;
 
     const steps = Math.trunc(dy / SWIPE_STEP) - touchAccum;
@@ -413,8 +459,9 @@
   window.addEventListener("resize", () => {
     cancelAnimationFrame(resizeRaf);
     resizeRaf = requestAnimationFrame(() => {
+      syncLayoutMode();
       refreshBorder();
-      paintTimeline();
+      paintTimeline(true);
     });
   });
 
@@ -497,8 +544,9 @@
 
   function onFullscreenChange() {
     if (isFullscreen()) enableImmersiveLayout();
+    syncLayoutMode();
     refreshBorder();
-    paintTimeline();
+    paintTimeline(true);
   }
 
   document.addEventListener("fullscreenchange", onFullscreenChange);
