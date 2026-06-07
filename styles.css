@@ -165,6 +165,10 @@ body[data-state="idle"] .border-fill {
   transition: color 800ms var(--ease);
 }
 
+body[data-state="idle"] .time {
+  color: var(--ink-track);
+}
+
 .digit {
   display: inline-block;
   height: 1em;
@@ -230,14 +234,14 @@ body[data-state="idle"] .border-fill {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: 20px;
 }
 
-/* Pause / Play — above the wheel, 20px gap */
+/* Pause / Play — 20px above the wheel via stack gap */
 .transport {
   width: 36px;
   height: 36px;
-  margin-bottom: 20px;
-  margin-right: 0;
+  margin: 0;
   border: none;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
@@ -329,10 +333,8 @@ body[data-state="idle"] .border-fill {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  max-width: 88px;
-  white-space: normal;
-  text-align: right;
-  line-height: 1.35;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .timeline-track {
@@ -459,7 +461,6 @@ body[data-bump="down"] .time {
   }
   .timeline-label.is-hint {
     font-size: 10px;
-    max-width: 72px;
   }
   .transport {
     width: 32px;
