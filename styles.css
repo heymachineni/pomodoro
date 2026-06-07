@@ -55,6 +55,26 @@ body {
   cursor: default;
 }
 
+/* CSS immersive — used when wheel/trackpad scroll (no fullscreen API access)
+   or on iOS Safari where requestFullscreen is unavailable. */
+html.immersive,
+html.immersive body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.immersive .stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+}
+
 .stage {
   position: fixed;
   inset: 0;

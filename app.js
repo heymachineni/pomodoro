@@ -421,8 +421,6 @@
     const dx = x - touchStartX;
     if (Math.abs(dx) > Math.abs(dy) * 1.4) return; // mostly horizontal
 
-    requestImmersive();
-
     const steps = Math.trunc(dy / SWIPE_STEP) - touchAccum;
     if (steps !== 0) {
       const dir = steps > 0 ? +1 : -1;
@@ -496,22 +494,29 @@
     );
   }
 
-  /** Try fullscreen on every user gesture until it succeeds. */
-  function requestImmersive() {
-    if (isFullscreen()) return;
-    void enterFullscreen();
+  function enableImmersiveLayout() {
+    document.documentElement.classList.add("immersive");
   }
 
-  async function enterFullscreen() {
-    if (isFullscreen()) return;
+  /** Synchronous — must run inside the user-gesture handler (no await). */
+  function requestImmersive() {
+    if (isFullscreen()) {
+      enableImmersiveLayout();
+      return;
+    }
 
     const opts = { navigationUI: "hide" };
     const candidates = [stage, document.documentElement, body];
 
     for (const el of candidates) {
       try {
-        if (el.requestFullscreen) {
-          await el.requestFullscreen(opts);
+        if (typeof el.requestFullscreen === "function") {
+          const p = el.requestFullscreen(opts);
+          if (p && typeof p.then === "function") {
+            p.then(() => enableImmersiveLayout()).catch(() => enableImmersiveLayout());
+          } else {
+            enableImmersiveLayout();
+          }
           return;
         }
       } catch (_) {}
@@ -519,8 +524,9 @@
 
     for (const el of candidates) {
       try {
-        if (el.webkitRequestFullscreen) {
+        if (typeof el.webkitRequestFullscreen === "function") {
           el.webkitRequestFullscreen();
+          enableImmersiveLayout();
           return;
         }
       } catch (_) {}
@@ -528,14 +534,17 @@
 
     for (const el of candidates) {
       try {
-        if (el.msRequestFullscreen) {
+        if (typeof el.msRequestFullscreen === "function") {
           el.msRequestFullscreen();
+          enableImmersiveLayout();
           return;
         }
       } catch (_) {}
     }
 
-    // iOS Safari has no Fullscreen API — collapse browser chrome instead.
+    // Wheel/trackpad cannot call requestFullscreen (no user activation).
+    // iOS Safari has no Fullscreen API. CSS immersive fills the viewport.
+    enableImmersiveLayout();
     minimizeMobileChrome();
   }
 
@@ -545,12 +554,19 @@
   }
 
   function onFullscreenChange() {
+    if (isFullscreen()) enableImmersiveLayout();
     refreshBorder();
     paintTimeline();
   }
 
   document.addEventListener("fullscreenchange", onFullscreenChange);
   document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+  // pointerdown / touchstart grant user activation for requestFullscreen.
+  window.addEventListener("pointerdown", requestImmersive, {
+    capture: true,
+    passive: true,
+  });
 
   // ------------------------------ Helpers ------------------------------ //
 
