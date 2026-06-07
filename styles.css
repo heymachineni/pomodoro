@@ -400,12 +400,6 @@ body[data-bump="up"] .time {
 body[data-bump="down"] .time {
   animation: nudgeNeg 280ms var(--ease);
 }
-body[data-bump="left"] .time {
-  animation: nudgeNeg 280ms var(--ease);
-}
-body[data-bump="right"] .time {
-  animation: nudge 280ms var(--ease);
-}
 
 /* ---------------------------------------------------------------------
    Accessibility
@@ -442,18 +436,18 @@ body[data-bump="right"] .time {
     --timeline-tick-active: 28px;
     --timeline-label-gap: 8px;
   }
-  html[data-timeline="side"] .timeline {
+  .timeline {
     right: calc(14px + var(--safe-right));
     width: 152px;
   }
-  html[data-timeline="side"] .timeline-stack {
+  .timeline-stack {
     width: 152px;
     height: min(360px, 48vh);
   }
-  html[data-timeline="side"] .timeline-label {
+  .timeline-label {
     font-size: 11px;
   }
-  html[data-timeline="side"] .timeline-label.is-hint {
+  .timeline-label.is-hint {
     font-size: 9px;
     white-space: normal;
     text-align: right;
@@ -461,115 +455,17 @@ body[data-bump="right"] .time {
     flex-direction: column;
     align-items: flex-end;
   }
-  html[data-timeline="side"] .timeline-label.is-hint .hint-line {
+  .timeline-label.is-hint .hint-line {
     display: block;
   }
-  html[data-timeline="side"] .timeline-label.is-hint .hint-line + .hint-line::before {
+  .timeline-label.is-hint .hint-line + .hint-line::before {
     content: none;
   }
   .pause-hint {
     font-size: 9px;
   }
-  html[data-timeline="side"] .tick {
-    margin: 7px 0;
-  }
-}
-
-/* Portrait touch — bottom horizontal wheel */
-@media (orientation: portrait) and (pointer: coarse) {
-  .center {
-    padding-bottom: min(108px, 16vh);
-  }
-
-  .timeline {
-    top: auto;
-    right: auto;
-    bottom: calc(16px + var(--safe-bottom));
-    left: calc(16px + var(--safe-left));
-    width: auto;
-    height: auto;
-  }
-
-  .timeline-stack {
-    position: relative;
-    top: auto;
-    right: auto;
-    transform: none;
-    width: min(420px, calc(100vw - 32px - var(--safe-left) - var(--safe-right)));
-    height: 72px;
-    margin: 0 auto;
-  }
-
-  .timeline-label {
-    top: auto;
-    right: 0;
-    left: auto;
-    bottom: calc(var(--timeline-tick-active) + var(--timeline-label-gap));
-    transform: none;
-    text-align: right;
-    font-size: 12px;
-    color: var(--accent);
-  }
-
-  .timeline-label.is-hint {
-    font-size: 10px;
-    bottom: calc(var(--timeline-tick-active) + var(--timeline-label-gap) - 6px);
-    color: var(--accent);
-    white-space: normal;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  .timeline-label.is-hint .hint-line {
-    display: block;
-  }
-
-  .timeline-label.is-hint .hint-line + .hint-line::before {
-    content: none;
-  }
-
-  .timeline-wheel {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent 0%,
-      #000 16%,
-      #000 84%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent 0%,
-      #000 16%,
-      #000 84%,
-      transparent 100%
-    );
-  }
-
-  .timeline-track {
-    flex-direction: row;
-    align-items: flex-end;
-    right: auto;
-    left: 50%;
-    top: auto;
-    bottom: 0;
-  }
-
   .tick {
-    width: 1px;
-    height: var(--len);
-    margin: 0 7px;
-    transform: scaleY(var(--s));
-    transform-origin: center bottom;
-  }
-
-  .tick.active {
-    width: 1.5px;
-    height: var(--timeline-tick-active);
+    margin: 7px 0;
   }
 }
 
