@@ -29,7 +29,6 @@ countdown immediately. There is no play, no pause, and no tap target.
 | Vertical swipe | ±1 minute               |
 | `↑`            | +1 minute               |
 | `↓`            | −1 minute               |
-| `Esc`          | Reset to idle           |
 
 Range is 1–60. The default is 25. Your last duration is saved locally.
 
@@ -75,7 +74,7 @@ There is no build step. Vanilla HTML, CSS, and one JavaScript file.
 ## Accessibility
 
 - `aria-live` region announces the current minutes when changed.
-- Keyboard‑first: arrows adjust, Esc resets.
+- Keyboard‑first: arrows adjust duration.
 - Honors `prefers-reduced-motion`.
 - Color-scheme is dark-only by design.
 

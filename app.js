@@ -8,7 +8,6 @@
  *   - Any adjustment (wheel / swipe / arrow key) auto-starts the
  *     countdown. Adjustments while running shift the endpoint live.
  *   - Tapping the screen does nothing. The timer cannot be paused.
- *   - Esc resets to idle.
  *   - First interaction requests fullscreen; running timers keep
  *     the screen awake via the Screen Wake Lock API.
  * ===================================================================== */
@@ -253,14 +252,6 @@
     srTime.textContent = "Timer complete.";
   }
 
-  function resetIdle() {
-    durationMs = minutesValue() * 60_000;
-    remainingMs = durationMs;
-    setMode("idle");
-    setDigits(remainingMs, true);
-    paintTimeline();
-  }
-
   // --------------------------- Adjust minutes -------------------------- //
 
   function adjust(delta) {
@@ -454,12 +445,6 @@
         e.preventDefault();
         requestImmersive();
         adjust(-1);
-        break;
-      case "Escape":
-        if (mode !== "idle") {
-          e.preventDefault();
-          resetIdle();
-        }
         break;
     }
   });
