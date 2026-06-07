@@ -1,5 +1,5 @@
 /* =====================================================================
- * Focus — ambient pomodoro timer
+ * Pomodoro — minimal fullscreen timer
  *
  * Behavior model:
  *   - The full perimeter is the "time bank". The orange depletes
@@ -9,13 +9,8 @@
  *     countdown. Adjustments while running shift the endpoint live.
  *   - Tapping the screen does nothing. The timer cannot be paused.
  *   - Esc resets to idle.
- *
- * Digit rendering:
- *   Four overflow-hidden columns, each containing a strip of digits
- *   surrounded by a wrap_below row above and a wrap_above row below.
- *   Strip is translated by -(n+1)*1em to put digit `n` in the visible
- *   window. For wraparound transitions (countdown borrow / count-up
- *   carry) we render to the wrap row, then snap silently back.
+ *   - First interaction requests fullscreen; running timers keep
+ *     the screen awake via the Screen Wake Lock API.
  * ===================================================================== */
 
 (() => {
@@ -26,7 +21,7 @@
   const MIN_MINUTES = 1;
   const MAX_MINUTES = 60;
   const DEFAULT_MINUTES = 25;
-  const STORAGE_KEY = "focus.duration";
+  const STORAGE_KEY = "pomodoro.duration";
 
   const STROKE = 8;
   const EDGE_INSET = 8;
@@ -58,11 +53,16 @@
   let viewportSize = { w: 0, h: 0 };
   let resizeRaf = 0;
 
+  let immersiveRequested = false;
+  /** @type {WakeLockSentinel|null} */
+  let wakeLock = null;
+
   // ----------------------------- Persistence --------------------------- //
 
   function loadDuration() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (raw == null) raw = localStorage.getItem("focus.duration");
       const v = raw == null ? NaN : parseInt(raw, 10);
       if (Number.isFinite(v) && v >= MIN_MINUTES && v <= MAX_MINUTES) return v;
     } catch (_) {}
@@ -240,12 +240,17 @@
   function setMode(next) {
     mode = next;
     body.dataset.state = next;
+    if (next === "running") {
+      acquireWakeLock();
+    } else {
+      releaseWakeLock();
+    }
   }
 
   function complete() {
     remainingMs = 0;
     setMode("complete");
-    srTime.textContent = "Focus complete.";
+    srTime.textContent = "Timer complete.";
   }
 
   function resetIdle() {
@@ -259,6 +264,8 @@
   // --------------------------- Adjust minutes -------------------------- //
 
   function adjust(delta) {
+    requestImmersive();
+
     const cur = minutesValue();
     const next = cur + delta;
 
@@ -353,6 +360,7 @@
     "wheel",
     (e) => {
       e.preventDefault();
+      requestImmersive();
       const now = performance.now();
       if (now - wheelLast > 220) wheelAcc = 0;
       wheelLast = now;
@@ -386,6 +394,7 @@
 
   function onTouchStart(e) {
     if (e.touches.length !== 1) return;
+    requestImmersive();
     touchStartY = e.touches[0].clientY;
     touchStartX = e.touches[0].clientX;
     touchAccum = 0;
@@ -426,10 +435,12 @@
     switch (e.key) {
       case "ArrowUp":
         e.preventDefault();
+        requestImmersive();
         adjust(+1);
         break;
       case "ArrowDown":
         e.preventDefault();
+        requestImmersive();
         adjust(-1);
         break;
       case "Escape":
@@ -454,12 +465,43 @@
   // ---- Visibility ----------------------------------------------------- //
 
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && mode === "running") {
+    if (document.hidden) return;
+    if (mode === "running") {
       remainingMs = Math.max(0, endAt - performance.now());
+      acquireWakeLock();
     }
   });
 
   // ------------------------------ Helpers ------------------------------ //
+
+  function requestImmersive() {
+    if (immersiveRequested) return;
+    immersiveRequested = true;
+    const el = document.documentElement;
+    const req =
+      el.requestFullscreen?.() ||
+      el.webkitRequestFullscreen?.() ||
+      el.msRequestFullscreen?.();
+    if (req && typeof req.catch === "function") req.catch(() => {});
+  }
+
+  async function acquireWakeLock() {
+    if (!("wakeLock" in navigator)) return;
+    try {
+      if (wakeLock && !wakeLock.released) return;
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => {
+        wakeLock = null;
+      });
+    } catch (_) {}
+  }
+
+  async function releaseWakeLock() {
+    try {
+      if (wakeLock && !wakeLock.released) await wakeLock.release();
+    } catch (_) {}
+    wakeLock = null;
+  }
 
   function haptic(ms) {
     try {

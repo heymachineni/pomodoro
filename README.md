@@ -1,20 +1,10 @@
-# Focus
+# Pomodoro
 
-An ultra-minimal fullscreen focus timer.
+A minimal fullscreen timer.
 
 The interface is the timer. There are no buttons, panels, or settings —
 just a black canvas, a number in the middle, a perimeter that depletes
 clockwise as time runs out, and a faint dial of minutes on the right edge.
-
-```
-                     ┌──────────────────────────────┐
-                     │                              │
-                     │                              │
-                     │           25:00              │ ╴ 25  ← active
-                     │                              │ ┊
-                     │                              │ ┊
-                     └──────────────────────────────┘
-```
 
 ## Run it
 
@@ -45,6 +35,9 @@ Range is 1–60. The default is 25. Your last duration is saved locally.
 
 While the timer is running, adjusting shifts the endpoint live —
 elapsed time is preserved, never reset.
+
+The first interaction also enters fullscreen. While running, the screen
+stays awake via the Screen Wake Lock API where supported.
 
 ## Build
 

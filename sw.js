@@ -1,5 +1,5 @@
-/* Focus — minimal offline service worker */
-const VERSION = "focus-v1";
+/* Pomodoro — minimal offline service worker */
+const VERSION = "pomodoro-v2";
 const CORE = [
   "./",
   "./index.html",

@@ -1,13 +1,13 @@
 {
-  "name": "Focus",
-  "short_name": "Focus",
-  "description": "An ambient fullscreen focus timer.",
+  "name": "Pomodoro",
+  "short_name": "Pomodoro",
+  "description": "A minimal fullscreen timer.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0B0B0B",
-  "theme_color": "#0B0B0B",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "categories": ["productivity", "lifestyle"],
   "icons": [
     {
