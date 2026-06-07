@@ -147,7 +147,10 @@ body[data-state="idle"] .border-fill {
 .timer-wrap {
   position: relative;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
+  gap: clamp(12px, 2.5vh, 20px);
+  pointer-events: auto;
 }
 
 .time {
@@ -208,6 +211,49 @@ body[data-state="idle"] .time {
   text-align: center;
 }
 
+/* Pause hint — below timer, device-specific */
+.pause-hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.38);
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body:not([data-state="idle"]) .pause-hint {
+  display: none;
+}
+
+.pause-hint-touch,
+.pause-hint-keyboard {
+  display: none;
+}
+
+html.touch-primary .pause-hint-touch,
+html:not(.touch-primary) .pause-hint-keyboard {
+  display: inline;
+}
+
+.kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.15em 0.45em;
+  margin: 0 0.12em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-family: inherit;
+  font-size: 0.92em;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
 /* ---------------------------------------------------------------------
    Right edge timeline
    --------------------------------------------------------------------- */
@@ -233,68 +279,6 @@ body[data-state="idle"] .time {
   transform: translateY(-50%);
   width: 168px;
   height: min(420px, 52vh);
-}
-
-/* Pause / Play — bottom-right corner */
-.transport {
-  --transport-size: 36px;
-
-  position: absolute;
-  right: calc(20px + var(--safe-right));
-  bottom: calc(20px + var(--safe-bottom));
-  z-index: 5;
-  width: var(--transport-size);
-  height: var(--transport-size);
-  margin: 0;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.42);
-  cursor: pointer;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  flex-shrink: 0;
-  transition: background 200ms var(--ease), color 200ms var(--ease);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.transport[hidden] {
-  display: none !important;
-}
-
-.transport:focus-visible {
-  outline: none;
-}
-
-.transport:not(.is-paused):hover {
-  background: var(--accent);
-  color: #000000;
-}
-
-.transport.is-paused {
-  background: rgba(255, 219, 88, 0.12);
-  color: var(--accent);
-}
-
-.transport svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-}
-
-.transport .icon-play {
-  display: none;
-}
-
-.transport.is-paused .icon-pause {
-  display: none;
-}
-
-.transport.is-paused .icon-play {
-  display: block;
 }
 
 .timeline-wheel {
@@ -465,9 +449,6 @@ body[data-bump="down"] .time {
     width: 152px;
     height: min(360px, 48vh);
   }
-  .transport {
-    --transport-size: 32px;
-  }
   .timeline-label {
     right: 36px;
     font-size: 11px;
@@ -476,9 +457,8 @@ body[data-bump="down"] .time {
     font-size: 9px;
     right: 38px;
   }
-  .transport svg {
-    width: 12px;
-    height: 12px;
+  .pause-hint {
+    font-size: 12px;
   }
   .tick {
     --w: 18px;

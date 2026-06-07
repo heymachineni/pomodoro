@@ -22,8 +22,13 @@
   const trackEl = document.getElementById("track");
   const timelineEl = document.querySelector(".timeline");
   const tlabel = document.getElementById("tlabel");
-  const transport = document.getElementById("transport");
+  const timerWrap = document.getElementById("timer-wrap");
   const srTime = document.getElementById("sr-time");
+
+  const touchPrimary =
+    window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  const keyboardPrimary = window.matchMedia("(pointer: fine)").matches;
+  document.documentElement.classList.toggle("touch-primary", touchPrimary);
 
   /** @type {"idle"|"running"|"paused"} */
   let mode = "idle";
@@ -180,7 +185,6 @@
     body.dataset.state = next;
     if (next === "running") acquireWakeLock();
     else releaseWakeLock();
-    updateTransport();
   }
 
   function enterIdle() {
@@ -220,14 +224,6 @@
       setMode("running");
       srTime.textContent = `${minutesValue()} minutes.`;
     }
-  }
-
-  function updateTransport() {
-    const min = minutesValue();
-    const visible = min > 0 && (mode === "running" || mode === "paused");
-    transport.hidden = !visible;
-    transport.classList.toggle("is-paused", mode === "paused");
-    transport.setAttribute("aria-label", mode === "paused" ? "Play" : "Pause");
   }
 
   function adjust(delta) {
@@ -335,15 +331,42 @@
       trackEl.style.transition = "";
       timelineEl.classList.add("ready");
     }
-
-    updateTransport();
   }
 
-  // ---- Transport ------------------------------------------------------ //
+  function canTogglePause() {
+    return minutesValue() > 0 && (mode === "running" || mode === "paused");
+  }
 
-  transport.addEventListener("click", (e) => {
+  // ---- Pause (tap / space) -------------------------------------------- //
+
+  timerWrap.addEventListener("click", (e) => {
+    if (!touchPrimary || !canTogglePause()) return;
     e.stopPropagation();
+    requestImmersive();
     togglePause();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === " " || e.code === "Space") {
+      if (!keyboardPrimary || !canTogglePause()) return;
+      e.preventDefault();
+      requestImmersive();
+      togglePause();
+      return;
+    }
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        requestImmersive();
+        adjust(+1);
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        requestImmersive();
+        adjust(-1);
+        break;
+    }
   });
 
   // ---- Mouse wheel / trackpad ----------------------------------------- //
@@ -421,24 +444,6 @@
   window.addEventListener("touchmove", onTouchMove, { passive: true });
   window.addEventListener("touchend", onTouchEnd, { passive: true });
   window.addEventListener("touchcancel", onTouchEnd, { passive: true });
-
-  // ---- Keyboard ------------------------------------------------------- //
-
-  window.addEventListener("keydown", (e) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    switch (e.key) {
-      case "ArrowUp":
-        e.preventDefault();
-        requestImmersive();
-        adjust(+1);
-        break;
-      case "ArrowDown":
-        e.preventDefault();
-        requestImmersive();
-        adjust(-1);
-        break;
-    }
-  });
 
   // ---- Resize --------------------------------------------------------- //
 
