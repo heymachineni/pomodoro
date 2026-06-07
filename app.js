@@ -534,6 +534,10 @@
   }
 
   function minimizeMobileChrome() {
+    // scrollTo trick is for mobile Safari only — on desktop it creates scroll gap.
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const touch = navigator.maxTouchPoints > 0;
+    if (!coarse && !touch) return;
     window.scrollTo(0, 1);
     setTimeout(() => window.scrollTo(0, 0), 0);
   }
@@ -582,6 +586,8 @@
   // ----------------------------- Boot ---------------------------------- //
 
   function init() {
+    window.scrollTo(0, 0);
+
     durationMs = loadDuration() * 60_000;
     remainingMs = durationMs;
     setMode("idle");
