@@ -21,7 +21,6 @@
   const trackEl = document.getElementById("track");
   const timelineEl = document.querySelector(".timeline");
   const tlabel = document.getElementById("tlabel");
-  const timerWrap = document.getElementById("timer-wrap");
   const srTime = document.getElementById("sr-time");
 
   const touchPrimary =
@@ -272,6 +271,13 @@
     trackEl.appendChild(frag);
   }
 
+  function setIdleHint(bottom) {
+    const verb = bottom ? "Swipe to" : "Scroll to";
+    tlabel.innerHTML =
+      `<span class="hint-line">${verb}</span><span class="hint-line">start</span>`;
+    tlabel.classList.add("is-hint");
+  }
+
   function paintTimeline(immediate = false) {
     const active = minutesValue();
     const ticks = trackEl.children;
@@ -305,8 +311,7 @@
     }
 
     if (active === 0) {
-      tlabel.textContent = bottom ? "Swipe to set timer" : "Scroll to set timer";
-      tlabel.classList.add("is-hint");
+      setIdleHint(bottom);
     } else {
       tlabel.textContent = String(active).padStart(2, "0");
       tlabel.classList.remove("is-hint");
@@ -332,13 +337,6 @@
   }
 
   // ---- Pause (tap / space) -------------------------------------------- //
-
-  timerWrap.addEventListener("click", (e) => {
-    if (!touchPrimary || !canTogglePause()) return;
-    e.stopPropagation();
-    requestImmersive();
-    togglePause();
-  });
 
   window.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -405,7 +403,9 @@
   let touchStartY = null;
   let touchStartX = null;
   let touchAccum = 0;
+  let touchMaxDist = 0;
   const SWIPE_STEP = 36;
+  const TAP_SLOP = 14;
 
   function onTouchStart(e) {
     if (e.touches.length !== 1) return;
@@ -413,6 +413,7 @@
     touchStartY = e.touches[0].clientY;
     touchStartX = e.touches[0].clientX;
     touchAccum = 0;
+    touchMaxDist = 0;
   }
 
   function onTouchMove(e) {
@@ -421,6 +422,8 @@
     const x = e.touches[0].clientX;
     const dy = touchStartY - y;
     const dx = x - touchStartX;
+    const dist = Math.hypot(dx, dy);
+    if (dist > touchMaxDist) touchMaxDist = dist;
 
     if (isBottomLayout()) {
       if (Math.abs(dy) > Math.abs(dx) * 1.4) return;
@@ -444,9 +447,19 @@
   }
 
   function onTouchEnd() {
+    if (
+      touchPrimary &&
+      canTogglePause() &&
+      touchStartY != null &&
+      touchMaxDist < TAP_SLOP
+    ) {
+      requestImmersive();
+      togglePause();
+    }
     touchStartY = null;
     touchStartX = null;
     touchAccum = 0;
+    touchMaxDist = 0;
   }
 
   window.addEventListener("touchstart", onTouchStart, { passive: true });
