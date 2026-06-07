@@ -247,7 +247,12 @@
     trackEl.appendChild(frag);
   }
 
-  function setIdleHint() {
+  function setIdleLabel() {
+    if (touchPrimary) {
+      tlabel.textContent = "00";
+      tlabel.classList.remove("is-hint");
+      return;
+    }
     tlabel.innerHTML =
       '<span class="hint-line">Scroll to</span><span class="hint-line">start</span>';
     tlabel.classList.add("is-hint");
@@ -284,7 +289,7 @@
     }
 
     if (active === 0) {
-      setIdleHint();
+      setIdleLabel();
     } else {
       tlabel.textContent = String(active).padStart(2, "0");
       tlabel.classList.remove("is-hint");
