@@ -38,6 +38,7 @@
   const fillPath = svg.querySelector(".border-fill");
   const timeEl = document.getElementById("time");
   const trackEl = document.getElementById("track");
+  const timelineEl = document.querySelector(".timeline");
   const tlabel = document.getElementById("tlabel");
   const srTime = document.getElementById("sr-time");
 
@@ -53,7 +54,6 @@
   let viewportSize = { w: 0, h: 0 };
   let resizeRaf = 0;
 
-  let immersiveRequested = false;
   /** @type {WakeLockSentinel|null} */
   let wakeLock = null;
 
@@ -313,17 +313,19 @@
     trackEl.appendChild(frag);
   }
 
-  function paintTimeline() {
+  function paintTimeline(immediate = false) {
     const active = minutesValue();
     const ticks = trackEl.children;
     if (!ticks.length) return;
     const activeTick = /** @type {HTMLElement} */ (ticks[active - 1]);
     if (!activeTick) return;
 
-    const tickCenter = activeTick.offsetTop + activeTick.offsetHeight / 2;
-    trackEl.style.transition =
-      "transform 360ms cubic-bezier(0.34, 1.16, 0.42, 1)";
-    trackEl.style.transform = `translateY(${-tickCenter}px)`;
+    if (immediate) {
+      trackEl.style.transition = "none";
+    } else {
+      trackEl.style.transition =
+        "transform 360ms cubic-bezier(0.34, 1.16, 0.42, 1)";
+    }
 
     for (let i = 0; i < ticks.length; i++) {
       const el = /** @type {HTMLElement} */ (ticks[i]);
@@ -347,6 +349,16 @@
     }
 
     tlabel.textContent = String(active);
+
+    const tickCenter = activeTick.offsetTop + activeTick.offsetHeight / 2;
+    trackEl.style.transform = `translateY(${-tickCenter}px)`;
+
+    if (immediate) {
+      // Commit final layout before first visible paint; then enable motion.
+      void trackEl.offsetHeight;
+      trackEl.style.transition = "";
+      timelineEl.classList.add("ready");
+    }
   }
 
   // ------------------------------ Inputs ------------------------------- //
@@ -408,6 +420,8 @@
     const dy = touchStartY - y; // up positive
     const dx = x - touchStartX;
     if (Math.abs(dx) > Math.abs(dy) * 1.4) return; // mostly horizontal
+
+    requestImmersive();
 
     const steps = Math.trunc(dy / SWIPE_STEP) - touchAccum;
     if (steps !== 0) {
@@ -472,18 +486,73 @@
     }
   });
 
-  // ------------------------------ Helpers ------------------------------ //
+  // ------------------------------ Immersive ---------------------------- //
 
-  function requestImmersive() {
-    if (immersiveRequested) return;
-    immersiveRequested = true;
-    const el = document.documentElement;
-    const req =
-      el.requestFullscreen?.() ||
-      el.webkitRequestFullscreen?.() ||
-      el.msRequestFullscreen?.();
-    if (req && typeof req.catch === "function") req.catch(() => {});
+  function isFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement
+    );
   }
+
+  /** Try fullscreen on every user gesture until it succeeds. */
+  function requestImmersive() {
+    if (isFullscreen()) return;
+    void enterFullscreen();
+  }
+
+  async function enterFullscreen() {
+    if (isFullscreen()) return;
+
+    const opts = { navigationUI: "hide" };
+    const candidates = [stage, document.documentElement, body];
+
+    for (const el of candidates) {
+      try {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen(opts);
+          return;
+        }
+      } catch (_) {}
+    }
+
+    for (const el of candidates) {
+      try {
+        if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+          return;
+        }
+      } catch (_) {}
+    }
+
+    for (const el of candidates) {
+      try {
+        if (el.msRequestFullscreen) {
+          el.msRequestFullscreen();
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // iOS Safari has no Fullscreen API — collapse browser chrome instead.
+    minimizeMobileChrome();
+  }
+
+  function minimizeMobileChrome() {
+    window.scrollTo(0, 1);
+    setTimeout(() => window.scrollTo(0, 0), 0);
+  }
+
+  function onFullscreenChange() {
+    refreshBorder();
+    paintTimeline();
+  }
+
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+  // ------------------------------ Helpers ------------------------------ //
 
   async function acquireWakeLock() {
     if (!("wakeLock" in navigator)) return;
@@ -520,7 +589,7 @@
     setDigits(remainingMs, true);
     buildTimeline();
     refreshBorder();
-    paintTimeline();
+    paintTimeline(true);
     requestAnimationFrame(frame);
 
     if ("serviceWorker" in navigator) {
