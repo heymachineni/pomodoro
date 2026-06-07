@@ -404,6 +404,11 @@
     }
   }
 
+  function clearSelection() {
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
+  }
+
   function onTouchEnd() {
     if (
       touchPrimary &&
@@ -413,6 +418,7 @@
     ) {
       requestImmersive();
       togglePause();
+      clearSelection();
     }
     touchStartY = null;
     touchStartX = null;
@@ -424,6 +430,8 @@
   window.addEventListener("touchmove", onTouchMove, { passive: true });
   window.addEventListener("touchend", onTouchEnd, { passive: true });
   window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+  stage.addEventListener("selectstart", (e) => e.preventDefault());
 
   // ---- Resize --------------------------------------------------------- //
 

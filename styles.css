@@ -142,12 +142,18 @@ body[data-state="idle"] .border-fill {
   justify-content: center;
   z-index: 4;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .timer-wrap {
   position: relative;
   display: inline-block;
   pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .time {
@@ -163,6 +169,9 @@ body[data-state="idle"] .border-fill {
   padding: 0 0.06em;
   /* center vertically with subtle optical adjustment */
   transition: color 800ms var(--ease);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body[data-state="idle"] .time {
@@ -178,6 +187,9 @@ body[data-state="idle"] .time {
   display: inline-block;
   min-width: 1ch;
   text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .time-colon {
@@ -207,7 +219,7 @@ body[data-state="idle"] .time {
   pointer-events: none;
 }
 
-body:not([data-state="idle"]) .pause-hint {
+body[data-state="running"] .pause-hint {
   display: none;
 }
 
@@ -216,8 +228,18 @@ body:not([data-state="idle"]) .pause-hint {
   display: none;
 }
 
-html.touch-primary .pause-hint-touch,
-html:not(.touch-primary) .pause-hint-keyboard {
+body[data-state="idle"] .pause-hint-resume,
+body[data-state="paused"] .pause-hint-pause {
+  display: none;
+}
+
+html.touch-primary body[data-state="idle"] .pause-hint-touch.pause-hint-pause,
+html.touch-primary body[data-state="paused"] .pause-hint-touch.pause-hint-resume {
+  display: inline;
+}
+
+html:not(.touch-primary) body[data-state="idle"] .pause-hint-keyboard.pause-hint-pause,
+html:not(.touch-primary) body[data-state="paused"] .pause-hint-keyboard.pause-hint-resume {
   display: inline;
 }
 
