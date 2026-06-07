@@ -1,52 +1,34 @@
 /* =====================================================================
  * Pomodoro — minimal fullscreen timer
- *
- * Behavior model:
- *   - The full perimeter is the "time bank". The orange depletes
- *     clockwise from top-center. At 00:00 the orange is gone; the
- *     subtle inactive-color track remains.
- *   - Any adjustment (wheel / swipe / arrow key) auto-starts the
- *     countdown. Adjustments while running shift the endpoint live.
- *   - Tapping the screen does nothing. The timer cannot be paused.
- *   - First interaction requests fullscreen; running timers keep
- *     the screen awake via the Screen Wake Lock API.
  * ===================================================================== */
 
 (() => {
   "use strict";
 
-  // ------------------------------- Config ------------------------------ //
-
-  const MIN_MINUTES = 1;
+  const MIN_MINUTES = 0;
   const MAX_MINUTES = 60;
-  const DEFAULT_MINUTES = 25;
   const STORAGE_KEY = "pomodoro.duration";
 
   const STROKE = 8;
   const EDGE_INSET = 8;
   const CORNER_RADIUS = 26;
-
-  const DIGIT_DURATION = 280; // keep in sync with --digit-dur in CSS
-
-  // ------------------------------ Elements ----------------------------- //
+  const DIGIT_DURATION = 280;
 
   const body = document.body;
   const stage = document.querySelector(".stage");
   const svg = document.querySelector(".border");
   const trackPath = svg.querySelector(".border-track");
   const fillPath = svg.querySelector(".border-fill");
-  const timeEl = document.getElementById("time");
   const trackEl = document.getElementById("track");
   const timelineEl = document.querySelector(".timeline");
   const tlabel = document.getElementById("tlabel");
+  const transport = document.getElementById("transport");
   const srTime = document.getElementById("sr-time");
 
-  // ------------------------------- State ------------------------------- //
-
-  /** @type {"idle"|"running"|"complete"} */
+  /** @type {"idle"|"running"|"paused"} */
   let mode = "idle";
-  let durationMs = loadDuration() * 60_000;
-  let remainingMs = durationMs;
+  let durationMs = 0;
+  let remainingMs = 0;
   let endAt = 0;
 
   let perimeterLength = 0;
@@ -56,25 +38,11 @@
   /** @type {WakeLockSentinel|null} */
   let wakeLock = null;
 
-  // ----------------------------- Persistence --------------------------- //
-
-  function loadDuration() {
-    try {
-      let raw = localStorage.getItem(STORAGE_KEY);
-      if (raw == null) raw = localStorage.getItem("focus.duration");
-      const v = raw == null ? NaN : parseInt(raw, 10);
-      if (Number.isFinite(v) && v >= MIN_MINUTES && v <= MAX_MINUTES) return v;
-    } catch (_) {}
-    return DEFAULT_MINUTES;
-  }
-
   function saveDuration(min) {
     try {
       localStorage.setItem(STORAGE_KEY, String(min));
     } catch (_) {}
   }
-
-  // ------------------------------ Border ------------------------------- //
 
   function buildPerimeter(w, h) {
     const inset = EDGE_INSET + STROKE / 2;
@@ -113,19 +81,16 @@
     setBorderProgress(currentProgress());
   }
 
-  /**
-   * progress 0 → 1 (elapsed / duration)
-   * Visible orange = remaining portion of the path, drawn from
-   * (progress * pl) through (pl), via dasharray + dashoffset.
-   */
   function setBorderProgress(p) {
+    if (durationMs <= 0 || mode === "idle") {
+      fillPath.setAttribute("stroke-dasharray", `0 ${perimeterLength}`);
+      return;
+    }
     const clamped = Math.max(0, Math.min(1, p));
     const visible = (1 - clamped) * perimeterLength;
     fillPath.setAttribute("stroke-dasharray", `${visible} ${perimeterLength}`);
     fillPath.setAttribute("stroke-dashoffset", `${-clamped * perimeterLength}`);
   }
-
-  // --------------------------- Timer math ------------------------------ //
 
   function currentProgress() {
     if (durationMs <= 0) return 0;
@@ -137,17 +102,11 @@
     return Math.round(durationMs / 60_000);
   }
 
-  // --------------------------- Rolling digits -------------------------- //
-
-  /**
-   * Each strip's structure: [wrap_below=max, 0, 1, ..., max, wrap_above=0].
-   * `prev` tracks the canonical digit value so we can detect wraparounds.
-   */
   const strips = [
     { el: query("[data-pos='m10']"), mod: 7, max: 6, prev: -1, snap: 0 },
-    { el: query("[data-pos='m1']"),  mod: 10, max: 9, prev: -1, snap: 0 },
+    { el: query("[data-pos='m1']"), mod: 10, max: 9, prev: -1, snap: 0 },
     { el: query("[data-pos='s10']"), mod: 6, max: 5, prev: -1, snap: 0 },
-    { el: query("[data-pos='s1']"),  mod: 10, max: 9, prev: -1, snap: 0 },
+    { el: query("[data-pos='s1']"), mod: 10, max: 9, prev: -1, snap: 0 },
   ];
 
   function query(sel) {
@@ -156,7 +115,6 @@
 
   function buildStrips() {
     for (const s of strips) {
-      // [max, 0, 1, ..., max, 0]
       const items = [s.max];
       for (let i = 0; i <= s.max; i++) items.push(i);
       items.push(0);
@@ -167,7 +125,6 @@
   function snapStripTo(s, n) {
     s.el.classList.add("snap");
     s.el.style.setProperty("--n", String(n));
-    // force reflow so the no-transition state is committed
     void s.el.offsetWidth;
     s.el.classList.remove("snap");
   }
@@ -179,32 +136,18 @@
       s.prev = next;
       return;
     }
-
-    // If a snap-back from a previous wraparound is still pending, finalize
-    // it instantly — otherwise the new transition would start from the
-    // wrap row and look like a long reverse spin.
     if (s.snap) {
       clearTimeout(s.snap);
       s.snap = 0;
       snapStripTo(s, s.prev);
     }
-
     const prev = s.prev;
     let target = next;
-
-    // Detect adjacent wraparounds (only ±1 boundary crossings)
-    if (prev === 0 && next === s.max) {
-      target = -1; // wrap below: render the "max" duplicate above row 0
-    } else if (prev === s.max && next === 0) {
-      target = s.mod; // wrap above: render the "0" duplicate after row max
-    }
-
+    if (prev === 0 && next === s.max) target = -1;
+    else if (prev === s.max && next === 0) target = s.mod;
     s.el.style.setProperty("--n", String(target));
     s.prev = next;
-
     if (target !== next) {
-      // Snap silently to canonical position once the visual transition
-      // has had time to land on the wrap row.
       s.snap = setTimeout(() => {
         s.snap = 0;
         snapStripTo(s, next);
@@ -212,8 +155,8 @@
     }
   }
 
-  function setDigits(remainingMs, immediate) {
-    const totalSec = Math.ceil(Math.max(0, remainingMs) / 1000);
+  function setDigits(ms, immediate) {
+    const totalSec = Math.ceil(Math.max(0, ms) / 1000);
     const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
     setStripDigit(strips[0], Math.floor(m / 10), immediate);
@@ -222,37 +165,70 @@
     setStripDigit(strips[3], s % 10, immediate);
   }
 
-  // ---------------------------- Render loop ---------------------------- //
-
   function frame() {
     if (mode === "running") {
       remainingMs = Math.max(0, endAt - performance.now());
-      if (remainingMs === 0) complete();
+      if (remainingMs === 0) finishCountdown();
     }
     setDigits(remainingMs, false);
     setBorderProgress(currentProgress());
     requestAnimationFrame(frame);
   }
 
-  // ------------------------------ Modes -------------------------------- //
-
   function setMode(next) {
     mode = next;
     body.dataset.state = next;
-    if (next === "running") {
-      acquireWakeLock();
-    } else {
-      releaseWakeLock();
-    }
+    if (next === "running") acquireWakeLock();
+    else releaseWakeLock();
+    updateTransport();
   }
 
-  function complete() {
+  function enterIdle() {
+    durationMs = 0;
     remainingMs = 0;
-    setMode("complete");
+    endAt = 0;
+    setMode("idle");
+    setDigits(0, true);
+    setBorderProgress(0);
+    saveDuration(0);
+    srTime.textContent = "Idle.";
+  }
+
+  function startTimer(minutes) {
+    if (minutes < 1) return;
+    durationMs = minutes * 60_000;
+    remainingMs = durationMs;
+    endAt = performance.now() + remainingMs;
+    setMode("running");
+    saveDuration(minutes);
+    srTime.textContent = `${minutes} minutes.`;
+  }
+
+  function finishCountdown() {
+    enterIdle();
+    paintTimeline();
     srTime.textContent = "Timer complete.";
   }
 
-  // --------------------------- Adjust minutes -------------------------- //
+  function togglePause() {
+    if (mode === "running") {
+      remainingMs = Math.max(0, endAt - performance.now());
+      setMode("paused");
+      srTime.textContent = "Paused.";
+    } else if (mode === "paused") {
+      endAt = performance.now() + remainingMs;
+      setMode("running");
+      srTime.textContent = `${minutesValue()} minutes.`;
+    }
+  }
+
+  function updateTransport() {
+    const min = minutesValue();
+    const visible = min > 0 && (mode === "running" || mode === "paused");
+    transport.hidden = !visible;
+    transport.classList.toggle("is-paused", mode === "paused");
+    transport.setAttribute("aria-label", mode === "paused" ? "Play" : "Pause");
+  }
 
   function adjust(delta) {
     requestImmersive();
@@ -269,20 +245,31 @@
       return;
     }
 
-    const oldDuration = durationMs;
+    if (next === 0) {
+      enterIdle();
+      paintTimeline();
+      haptic(6);
+      return;
+    }
+
+    const ddur = (next - cur) * 60_000;
     durationMs = next * 60_000;
-    const ddur = durationMs - oldDuration;
 
     if (mode === "running") {
-      // Live adjustment: shift endpoint. Elapsed time is preserved.
       endAt += ddur;
       remainingMs = Math.max(0, endAt - performance.now());
-      if (remainingMs <= 0) complete();
+      if (remainingMs <= 0) {
+        finishCountdown();
+        return;
+      }
+    } else if (mode === "paused") {
+      remainingMs = Math.max(0, remainingMs + ddur);
+      remainingMs = Math.min(remainingMs, durationMs);
     } else {
-      // Idle / complete → set fresh duration and auto-start.
-      remainingMs = durationMs;
-      endAt = performance.now() + remainingMs;
-      setMode("running");
+      startTimer(next);
+      paintTimeline();
+      haptic(6);
+      return;
     }
 
     saveDuration(next);
@@ -290,8 +277,6 @@
     paintTimeline();
     srTime.textContent = `${next} minutes.`;
   }
-
-  // --------------------------- Right timeline -------------------------- //
 
   function buildTimeline() {
     const frag = document.createDocumentFragment();
@@ -308,19 +293,17 @@
     const active = minutesValue();
     const ticks = trackEl.children;
     if (!ticks.length) return;
-    const activeTick = /** @type {HTMLElement} */ (ticks[active - 1]);
+    const activeTick = /** @type {HTMLElement} */ (ticks[active]);
     if (!activeTick) return;
 
-    if (immediate) {
-      trackEl.style.transition = "none";
-    } else {
+    if (immediate) trackEl.style.transition = "none";
+    else
       trackEl.style.transition =
         "transform 360ms cubic-bezier(0.34, 1.16, 0.42, 1)";
-    }
 
     for (let i = 0; i < ticks.length; i++) {
       const el = /** @type {HTMLElement} */ (ticks[i]);
-      const dist = Math.abs(i + 1 - active);
+      const dist = Math.abs(i - active);
       const isActive = dist === 0;
       el.classList.toggle("active", isActive);
 
@@ -330,29 +313,38 @@
         el.style.setProperty("--s", "1");
       } else {
         const t = Math.min(dist / 6, 1);
-        const width = 28 - t * 14;
-        const opacity = 0.85 - t * 0.78;
-        const scale = 1 - t * 0.28;
-        el.style.setProperty("--w", `${width.toFixed(1)}px`);
-        el.style.setProperty("--o", opacity.toFixed(3));
-        el.style.setProperty("--s", scale.toFixed(3));
+        el.style.setProperty("--w", `${(28 - t * 14).toFixed(1)}px`);
+        el.style.setProperty("--o", (0.85 - t * 0.78).toFixed(3));
+        el.style.setProperty("--s", (1 - t * 0.28).toFixed(3));
       }
     }
 
-    tlabel.textContent = String(active);
+    if (active === 0) {
+      tlabel.textContent = "Scroll to set timer";
+      tlabel.classList.add("is-hint");
+    } else {
+      tlabel.textContent = String(active).padStart(2, "0");
+      tlabel.classList.remove("is-hint");
+    }
 
     const tickCenter = activeTick.offsetTop + activeTick.offsetHeight / 2;
     trackEl.style.transform = `translateY(${-tickCenter}px)`;
 
     if (immediate) {
-      // Commit final layout before first visible paint; then enable motion.
       void trackEl.offsetHeight;
       trackEl.style.transition = "";
       timelineEl.classList.add("ready");
     }
+
+    updateTransport();
   }
 
-  // ------------------------------ Inputs ------------------------------- //
+  // ---- Transport ------------------------------------------------------ //
+
+  transport.addEventListener("click", (e) => {
+    e.stopPropagation();
+    togglePause();
+  });
 
   // ---- Mouse wheel / trackpad ----------------------------------------- //
 
@@ -404,13 +396,12 @@
   }
 
   function onTouchMove(e) {
-    if (touchStartY == null) return;
-    if (e.touches.length !== 1) return;
+    if (touchStartY == null || e.touches.length !== 1) return;
     const y = e.touches[0].clientY;
     const x = e.touches[0].clientX;
-    const dy = touchStartY - y; // up positive
+    const dy = touchStartY - y;
     const dx = x - touchStartX;
-    if (Math.abs(dx) > Math.abs(dy) * 1.4) return; // mostly horizontal
+    if (Math.abs(dx) > Math.abs(dy) * 1.4) return;
 
     const steps = Math.trunc(dy / SWIPE_STEP) - touchAccum;
     if (steps !== 0) {
@@ -459,8 +450,6 @@
     });
   });
 
-  // ---- Visibility ----------------------------------------------------- //
-
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
     if (mode === "running") {
@@ -469,7 +458,7 @@
     }
   });
 
-  // ------------------------------ Immersive ---------------------------- //
+  // ---- Immersive ------------------------------------------------------ //
 
   function isFullscreen() {
     return !!(
@@ -483,7 +472,6 @@
     document.documentElement.classList.add("immersive");
   }
 
-  /** Synchronous — must run inside the user-gesture handler (no await). */
   function requestImmersive() {
     if (isFullscreen()) {
       enableImmersiveLayout();
@@ -527,14 +515,11 @@
       } catch (_) {}
     }
 
-    // Wheel/trackpad cannot call requestFullscreen (no user activation).
-    // iOS Safari has no Fullscreen API. CSS immersive fills the viewport.
     enableImmersiveLayout();
     minimizeMobileChrome();
   }
 
   function minimizeMobileChrome() {
-    // scrollTo trick is for mobile Safari only — on desktop it creates scroll gap.
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     const touch = navigator.maxTouchPoints > 0;
     if (!coarse && !touch) return;
@@ -550,14 +535,12 @@
 
   document.addEventListener("fullscreenchange", onFullscreenChange);
   document.addEventListener("webkitfullscreenchange", onFullscreenChange);
-
-  // pointerdown / touchstart grant user activation for requestFullscreen.
   window.addEventListener("pointerdown", requestImmersive, {
     capture: true,
     passive: true,
   });
 
-  // ------------------------------ Helpers ------------------------------ //
+  // ---- Helpers -------------------------------------------------------- //
 
   async function acquireWakeLock() {
     if (!("wakeLock" in navigator)) return;
@@ -583,17 +566,13 @@
     } catch (_) {}
   }
 
-  // ----------------------------- Boot ---------------------------------- //
+  // ---- Boot ----------------------------------------------------------- //
 
   function init() {
     window.scrollTo(0, 0);
 
-    durationMs = loadDuration() * 60_000;
-    remainingMs = durationMs;
-    setMode("idle");
-
+    enterIdle();
     buildStrips();
-    setDigits(remainingMs, true);
     buildTimeline();
     refreshBorder();
     paintTimeline(true);

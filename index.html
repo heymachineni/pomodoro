@@ -31,13 +31,11 @@
 
   <body>
     <main class="stage" role="application" aria-label="Pomodoro">
-      <!-- Border: subtle background track + depleting orange progress -->
       <svg class="border" aria-hidden="true" preserveAspectRatio="none">
         <path class="border-track" />
         <path class="border-fill" />
       </svg>
 
-      <!-- Center display -->
       <section class="center" aria-live="off">
         <div class="timer-wrap">
           <div class="time" id="time" aria-hidden="true">
@@ -50,14 +48,34 @@
         </div>
       </section>
 
-      <!-- Right edge minute timeline -->
       <aside class="timeline" aria-hidden="true">
-        <span class="timeline-label" id="tlabel">25</span>
-        <div class="timeline-track" id="track"></div>
+        <div class="timeline-stack">
+          <button
+            class="transport"
+            id="transport"
+            type="button"
+            hidden
+            aria-label="Pause"
+          >
+            <svg class="icon-pause" viewBox="0 0 32 32" aria-hidden="true">
+              <path
+                d="M12 6h-2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2m10 0h-2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2"
+              />
+            </svg>
+            <svg class="icon-play" viewBox="0 0 32 32" aria-hidden="true">
+              <path
+                d="M7 28a1 1 0 0 1-1-1V5a1 1 0 0 1 1.482-.876l20 11a1 1 0 0 1 0 1.752l-20 11A1 1 0 0 1 7 28"
+              />
+            </svg>
+          </button>
+          <div class="timeline-wheel">
+            <span class="timeline-label is-hint" id="tlabel">Scroll to set timer</span>
+            <div class="timeline-track" id="track"></div>
+          </div>
+        </div>
       </aside>
 
-      <!-- Live region for assistive tech -->
-      <p class="sr-only" id="sr-time" aria-live="polite" aria-atomic="true">25 minutes</p>
+      <p class="sr-only" id="sr-time" aria-live="polite" aria-atomic="true">Idle</p>
     </main>
 
     <script src="app.js" defer></script>

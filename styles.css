@@ -126,8 +126,8 @@ html:-webkit-full-screen {
   transition: opacity 600ms var(--ease);
 }
 
-/* At completion the orange disappears entirely; only the track remains. */
-body[data-state="complete"] .border-fill {
+/* At idle or zero duration, no accent border fill. */
+body[data-state="idle"] .border-fill {
   opacity: 0;
 }
 
@@ -204,11 +204,6 @@ body[data-state="complete"] .border-fill {
   text-align: center;
 }
 
-/* Completion state: timer turns gray, no animation, no flash */
-body[data-state="complete"] .time {
-  color: var(--ink-track);
-}
-
 /* ---------------------------------------------------------------------
    Right edge timeline
    --------------------------------------------------------------------- */
@@ -217,11 +212,84 @@ body[data-state="complete"] .time {
   top: 0;
   bottom: 0;
   right: calc(20px + var(--safe-right));
-  width: 80px;
+  width: 120px;
   z-index: 3;
   pointer-events: none;
-  overflow: hidden;
   visibility: hidden;
+}
+
+.timeline.ready {
+  visibility: visible;
+}
+
+.timeline-stack {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Pause / Play — above the wheel, 20px gap */
+.transport {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 20px;
+  margin-right: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 200ms var(--ease), color 200ms var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.transport:focus-visible {
+  outline: none;
+}
+
+.transport:not(.is-paused):hover {
+  background: var(--accent);
+  color: #000000;
+}
+
+.transport.is-paused {
+  background: rgba(255, 219, 88, 0.12);
+  color: var(--accent);
+}
+
+.transport svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.transport .icon-play {
+  display: none;
+}
+
+.transport.is-paused .icon-pause {
+  display: none;
+}
+
+.transport.is-paused .icon-play {
+  display: block;
+}
+
+.timeline-wheel {
+  position: relative;
+  width: 120px;
+  height: min(420px, 52vh);
+  overflow: hidden;
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -236,10 +304,6 @@ body[data-state="complete"] .time {
     #000 82%,
     transparent 100%
   );
-}
-
-.timeline.ready {
-  visibility: visible;
 }
 
 .timeline:not(.ready) .tick {
@@ -257,7 +321,18 @@ body[data-state="complete"] .time {
   color: var(--accent);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-  transition: color 800ms var(--ease);
+  transition: color 200ms var(--ease), opacity 200ms var(--ease);
+  white-space: nowrap;
+}
+
+.timeline-label.is-hint {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  max-width: 88px;
+  white-space: normal;
+  text-align: right;
+  line-height: 1.35;
 }
 
 .timeline-track {
@@ -297,11 +372,9 @@ body[data-state="complete"] .time {
   background: var(--accent);
 }
 
-body[data-state="complete"] .timeline-label {
-  color: var(--ink-track);
-}
-body[data-state="complete"] .tick.active {
-  background: var(--ink-track);
+body[data-state="paused"] .time {
+  opacity: 0.65;
+  transition: opacity 600ms var(--ease);
 }
 
 /* ---------------------------------------------------------------------
@@ -374,11 +447,27 @@ body[data-bump="down"] .time {
   }
   .timeline {
     right: calc(14px + var(--safe-right));
-    width: 60px;
+    width: 100px;
+  }
+  .timeline-wheel {
+    width: 100px;
+    height: min(360px, 48vh);
   }
   .timeline-label {
     right: 36px;
     font-size: 11px;
+  }
+  .timeline-label.is-hint {
+    font-size: 10px;
+    max-width: 72px;
+  }
+  .transport {
+    width: 32px;
+    height: 32px;
+  }
+  .transport svg {
+    width: 12px;
+    height: 12px;
   }
   .tick {
     --w: 18px;
