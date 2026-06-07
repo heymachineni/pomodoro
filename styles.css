@@ -1,6 +1,6 @@
 /* =====================================================================
    Pomodoro — minimal fullscreen timer
-   Black canvas. One accent. Rolling digits. No glow.
+   Black canvas. One accent. Instant digits. No glow.
    ===================================================================== */
 
 :root {
@@ -18,10 +18,7 @@
   --time-size: clamp(96px, 20vw, 280px);
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-mech: cubic-bezier(0.32, 0.72, 0.16, 1);
   --spring: cubic-bezier(0.34, 1.16, 0.42, 1);
-
-  --digit-dur: 280ms;
 }
 
 * {
@@ -132,7 +129,7 @@ body[data-state="idle"] .border-fill {
 }
 
 /* ---------------------------------------------------------------------
-   Center: the timer (rolling digits)
+   Center: the timer (instant digit swap)
    --------------------------------------------------------------------- */
 .center {
   position: absolute;
@@ -174,10 +171,13 @@ body[data-state="idle"] .time {
 
 .digit {
   display: inline-block;
-  height: 1em;
-  overflow: hidden;
   vertical-align: top;
-  position: relative;
+}
+
+.digit-val {
+  display: inline-block;
+  min-width: 1ch;
+  text-align: center;
 }
 
 .time-colon {
@@ -188,27 +188,6 @@ body[data-state="idle"] .time {
   vertical-align: top;
   /* Optical alignment with the digits */
   transform: translateY(-0.03em);
-}
-
-.strip {
-  display: block;
-  /* Strip layout: [wrap_below, 0, 1, ..., max, wrap_above]
-     With the wrap_below offset of 1em above the visible window,
-     translation is -(--n + 1) * 1em to put digit `--n` in view. */
-  transform: translateY(calc((var(--n, 0) + 1) * -1em));
-  transition: transform var(--digit-dur) var(--ease-mech);
-  will-change: transform;
-}
-
-.strip.snap {
-  transition: none !important;
-}
-
-.strip span {
-  display: block;
-  height: 1em;
-  line-height: 1;
-  text-align: center;
 }
 
 /* Pause hint — below timer, device-specific */

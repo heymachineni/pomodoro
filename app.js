@@ -12,7 +12,6 @@
   const STROKE = 8;
   const EDGE_INSET = 8;
   const CORNER_RADIUS = 26;
-  const DIGIT_DURATION = 280;
 
   const body = document.body;
   const stage = document.querySelector(".stage");
@@ -107,67 +106,31 @@
     return Math.round(durationMs / 60_000);
   }
 
-  const strips = [
-    { el: query("[data-pos='m10']"), mod: 7, max: 6, prev: -1, snap: 0 },
-    { el: query("[data-pos='m1']"), mod: 10, max: 9, prev: -1, snap: 0 },
-    { el: query("[data-pos='s10']"), mod: 6, max: 5, prev: -1, snap: 0 },
-    { el: query("[data-pos='s1']"), mod: 10, max: 9, prev: -1, snap: 0 },
+  const digits = [
+    { el: query("[data-pos='m10']"), prev: -1 },
+    { el: query("[data-pos='m1']"), prev: -1 },
+    { el: query("[data-pos='s10']"), prev: -1 },
+    { el: query("[data-pos='s1']"), prev: -1 },
   ];
 
   function query(sel) {
     return /** @type {HTMLElement} */ (document.querySelector(sel));
   }
 
-  function buildStrips() {
-    for (const s of strips) {
-      const items = [s.max];
-      for (let i = 0; i <= s.max; i++) items.push(i);
-      items.push(0);
-      s.el.innerHTML = items.map((n) => `<span>${n}</span>`).join("");
-    }
+  function setDigit(d, next) {
+    if (d.prev === next) return;
+    d.el.textContent = String(next);
+    d.prev = next;
   }
 
-  function snapStripTo(s, n) {
-    s.el.classList.add("snap");
-    s.el.style.setProperty("--n", String(n));
-    void s.el.offsetWidth;
-    s.el.classList.remove("snap");
-  }
-
-  function setStripDigit(s, next, immediate) {
-    if (s.prev === next && !immediate) return;
-    if (immediate || s.prev === -1) {
-      snapStripTo(s, next);
-      s.prev = next;
-      return;
-    }
-    if (s.snap) {
-      clearTimeout(s.snap);
-      s.snap = 0;
-      snapStripTo(s, s.prev);
-    }
-    const prev = s.prev;
-    let target = next;
-    if (prev === 0 && next === s.max) target = -1;
-    else if (prev === s.max && next === 0) target = s.mod;
-    s.el.style.setProperty("--n", String(target));
-    s.prev = next;
-    if (target !== next) {
-      s.snap = setTimeout(() => {
-        s.snap = 0;
-        snapStripTo(s, next);
-      }, DIGIT_DURATION + 30);
-    }
-  }
-
-  function setDigits(ms, immediate) {
+  function setDigits(ms) {
     const totalSec = Math.ceil(Math.max(0, ms) / 1000);
     const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
-    setStripDigit(strips[0], Math.floor(m / 10), immediate);
-    setStripDigit(strips[1], m % 10, immediate);
-    setStripDigit(strips[2], Math.floor(s / 10), immediate);
-    setStripDigit(strips[3], s % 10, immediate);
+    setDigit(digits[0], Math.floor(m / 10));
+    setDigit(digits[1], m % 10);
+    setDigit(digits[2], Math.floor(s / 10));
+    setDigit(digits[3], s % 10);
   }
 
   function frame() {
@@ -175,7 +138,7 @@
       remainingMs = Math.max(0, endAt - performance.now());
       if (remainingMs === 0) finishCountdown();
     }
-    setDigits(remainingMs, false);
+    setDigits(remainingMs);
     setBorderProgress(currentProgress());
     requestAnimationFrame(frame);
   }
@@ -192,7 +155,7 @@
     remainingMs = 0;
     endAt = 0;
     setMode("idle");
-    setDigits(0, true);
+    setDigits(0);
     setBorderProgress(0);
     saveDuration(0);
     srTime.textContent = "Idle.";
@@ -577,7 +540,6 @@
     window.scrollTo(0, 0);
 
     enterIdle();
-    buildStrips();
     buildTimeline();
     refreshBorder();
     paintTimeline(true);
