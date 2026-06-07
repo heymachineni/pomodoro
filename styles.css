@@ -216,7 +216,7 @@ body[data-state="idle"] .time {
   top: 0;
   bottom: 0;
   right: calc(20px + var(--safe-right));
-  width: 120px;
+  width: 168px;
   z-index: 3;
   pointer-events: none;
   visibility: hidden;
@@ -227,20 +227,24 @@ body[data-state="idle"] .time {
 }
 
 .timeline-stack {
+  --transport-size: 36px;
+  --transport-gap: 20px;
+
   position: absolute;
   top: 50%;
   right: 0;
   transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 20px;
+  width: 168px;
+  height: min(420px, 52vh);
 }
 
-/* Pause / Play — 20px above the wheel via stack gap */
 .transport {
-  width: 36px;
-  height: 36px;
+  position: absolute;
+  right: 0;
+  top: calc(50% - var(--transport-gap) - var(--transport-size));
+  z-index: 2;
+  width: var(--transport-size);
+  height: var(--transport-size);
   margin: 0;
   border: none;
   border-radius: 50%;
@@ -255,6 +259,10 @@ body[data-state="idle"] .time {
   flex-shrink: 0;
   transition: background 200ms var(--ease), color 200ms var(--ease);
   -webkit-tap-highlight-color: transparent;
+}
+
+.transport[hidden] {
+  display: none !important;
 }
 
 .transport:focus-visible {
@@ -290,9 +298,10 @@ body[data-state="idle"] .time {
 }
 
 .timeline-wheel {
-  position: relative;
-  width: 120px;
-  height: min(420px, 52vh);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   -webkit-mask-image: linear-gradient(
     to bottom,
@@ -330,11 +339,12 @@ body[data-state="idle"] .time {
 }
 
 .timeline-label.is-hint {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   line-height: 1;
+  right: 42px;
 }
 
 .timeline-track {
@@ -449,10 +459,11 @@ body[data-bump="down"] .time {
   }
   .timeline {
     right: calc(14px + var(--safe-right));
-    width: 100px;
+    width: 152px;
   }
-  .timeline-wheel {
-    width: 100px;
+  .timeline-stack {
+    --transport-size: 32px;
+    width: 152px;
     height: min(360px, 48vh);
   }
   .timeline-label {
@@ -460,11 +471,8 @@ body[data-bump="down"] .time {
     font-size: 11px;
   }
   .timeline-label.is-hint {
-    font-size: 10px;
-  }
-  .transport {
-    width: 32px;
-    height: 32px;
+    font-size: 9px;
+    right: 38px;
   }
   .transport svg {
     width: 12px;
