@@ -227,9 +227,6 @@ body[data-state="idle"] .time {
 }
 
 .timeline-stack {
-  --transport-size: 36px;
-  --transport-gap: 20px;
-
   position: absolute;
   top: 50%;
   right: 0;
@@ -238,11 +235,14 @@ body[data-state="idle"] .time {
   height: min(420px, 52vh);
 }
 
+/* Pause / Play — bottom-right corner */
 .transport {
+  --transport-size: 36px;
+
   position: absolute;
-  right: 0;
-  top: calc(50% - var(--transport-gap) - var(--transport-size));
-  z-index: 2;
+  right: calc(20px + var(--safe-right));
+  bottom: calc(20px + var(--safe-bottom));
+  z-index: 5;
   width: var(--transport-size);
   height: var(--transport-size);
   margin: 0;
@@ -462,9 +462,11 @@ body[data-bump="down"] .time {
     width: 152px;
   }
   .timeline-stack {
-    --transport-size: 32px;
     width: 152px;
     height: min(360px, 48vh);
+  }
+  .transport {
+    --transport-size: 32px;
   }
   .timeline-label {
     right: 36px;
