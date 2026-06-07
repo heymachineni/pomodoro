@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#000000"/>
-  <rect x="56" y="56" width="400" height="400" rx="72" fill="none" stroke="#FF5C00" stroke-width="14" stroke-linejoin="round"/>
-  <g fill="#FF5C00" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-weight="700" letter-spacing="-6">
-    <text x="256" y="304" text-anchor="middle" font-size="172">25</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" fill="#000000"/>
+  <path
+    fill="#FF5C00"
+    d="M248 128a56 56 0 0 1-95.6 39.6l-.33-.35l-59.95-67.7a40 40 0 1 0 0 56.9l8.52-9.62a8 8 0 1 1 12 10.61l-8.69 9.81l-.33.35a56 56 0 1 1 0-79.2l.33.35l59.95 67.7a40 40 0 1 0 0-56.9l-8.52 9.62a8 8 0 1 1-12-10.61l8.69-9.81l.33-.35A56 56 0 0 1 248 128"
+  />
 </svg>
