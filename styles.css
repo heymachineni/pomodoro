@@ -1,0 +1,354 @@
+/* =====================================================================
+   Focus — an ambient pomodoro timer
+   Black canvas. One accent. Rolling digits. No glow.
+   ===================================================================== */
+
+:root {
+  --bg: #000000;
+  --accent: #ff5c00;
+  --ink-track: rgba(255, 255, 255, 0.1);
+  --ink-dim: rgba(255, 255, 255, 0.42);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  --stroke: 8px;
+  --time-size: clamp(96px, 20vw, 280px);
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-mech: cubic-bezier(0.32, 0.72, 0.16, 1);
+  --spring: cubic-bezier(0.34, 1.16, 0.42, 1);
+
+  --digit-dur: 280ms;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: #fff;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "ss01", "tnum", "cv11";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+body {
+  cursor: default;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ---------------------------------------------------------------------
+   Perimeter border
+   --------------------------------------------------------------------- */
+.border {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.border-track {
+  fill: none;
+  stroke: var(--ink-track);
+  stroke-width: var(--stroke);
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+
+.border-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: var(--stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 600ms var(--ease);
+}
+
+/* At completion the orange disappears entirely; only the track remains. */
+body[data-state="complete"] .border-fill {
+  opacity: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Center: the timer (rolling digits)
+   --------------------------------------------------------------------- */
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.timer-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.time {
+  display: inline-flex;
+  align-items: stretch;
+  font-weight: 700;
+  font-size: var(--time-size);
+  line-height: 1;
+  color: var(--accent);
+  font-feature-settings: "tnum", "cv11";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  padding: 0 0.06em;
+  /* center vertically with subtle optical adjustment */
+  transition: color 800ms var(--ease);
+}
+
+.digit {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  vertical-align: top;
+  position: relative;
+}
+
+.time-colon {
+  display: inline-block;
+  height: 1em;
+  line-height: 1;
+  padding: 0 0.04em;
+  vertical-align: top;
+  /* Optical alignment with the digits */
+  transform: translateY(-0.03em);
+}
+
+.strip {
+  display: block;
+  /* Strip layout: [wrap_below, 0, 1, ..., max, wrap_above]
+     With the wrap_below offset of 1em above the visible window,
+     translation is -(--n + 1) * 1em to put digit `--n` in view. */
+  transform: translateY(calc((var(--n, 0) + 1) * -1em));
+  transition: transform var(--digit-dur) var(--ease-mech);
+  will-change: transform;
+}
+
+.strip.snap {
+  transition: none !important;
+}
+
+.strip span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+/* Completion state: timer turns gray, no animation, no flash */
+body[data-state="complete"] .time {
+  color: var(--ink-track);
+}
+
+/* ---------------------------------------------------------------------
+   Right edge timeline
+   --------------------------------------------------------------------- */
+.timeline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(20px + var(--safe-right));
+  width: 80px;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 18%,
+    #000 82%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 18%,
+    #000 82%,
+    transparent 100%
+  );
+}
+
+.timeline-label {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transition: color 800ms var(--ease);
+}
+
+.timeline-track {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  transform: translateY(0);
+  will-change: transform;
+}
+
+.tick {
+  --o: 1;
+  --w: 24px;
+  --s: 1;
+
+  display: block;
+  height: 1px;
+  width: var(--w);
+  background: #fff;
+  opacity: var(--o);
+  transform: scaleX(var(--s));
+  transform-origin: right center;
+  margin: 9px 0;
+  border-radius: 1px;
+  transition: width 320ms var(--spring), opacity 320ms var(--ease),
+    background 320ms var(--ease), transform 320ms var(--spring);
+}
+
+.tick.active {
+  width: 36px;
+  height: 1.5px;
+  opacity: 1;
+  background: var(--accent);
+}
+
+body[data-state="complete"] .timeline-label {
+  color: var(--ink-track);
+}
+body[data-state="complete"] .tick.active {
+  background: var(--ink-track);
+}
+
+/* ---------------------------------------------------------------------
+   Edge resistance (limit hit)
+   --------------------------------------------------------------------- */
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(2.5px);
+  }
+  65% {
+    transform: translateX(-2.5px);
+  }
+}
+@keyframes nudgeNeg {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(-2.5px);
+  }
+  65% {
+    transform: translateX(2.5px);
+  }
+}
+
+body[data-bump="up"] .time {
+  animation: nudge 280ms var(--ease);
+}
+body[data-bump="down"] .time {
+  animation: nudgeNeg 280ms var(--ease);
+}
+
+/* ---------------------------------------------------------------------
+   Accessibility
+   --------------------------------------------------------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------- */
+@media (max-width: 520px) {
+  :root {
+    --stroke: 6px;
+    --time-size: clamp(72px, 22vw, 160px);
+  }
+  .timeline {
+    right: calc(14px + var(--safe-right));
+    width: 60px;
+  }
+  .timeline-label {
+    right: 36px;
+    font-size: 11px;
+  }
+  .tick {
+    --w: 18px;
+    margin: 7px 0;
+  }
+  .tick.active {
+    width: 28px;
+  }
+}
+
+@media (min-width: 1400px) {
+  :root {
+    --time-size: clamp(180px, 16vw, 320px);
+  }
+}

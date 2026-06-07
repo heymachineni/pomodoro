@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Focus" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="description" content="A minimal fullscreen focus timer." />
+
+    <title>Focus</title>
+
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="stage" role="application" aria-label="Focus timer">
+      <!-- Border: subtle background track + depleting orange progress -->
+      <svg class="border" aria-hidden="true" preserveAspectRatio="none">
+        <path class="border-track" />
+        <path class="border-fill" />
+      </svg>
+
+      <!-- Center display -->
+      <section class="center" aria-live="off">
+        <div class="timer-wrap">
+          <div class="time" id="time" aria-hidden="true">
+            <div class="digit"><div class="strip" data-pos="m10"></div></div>
+            <div class="digit"><div class="strip" data-pos="m1"></div></div>
+            <span class="time-colon">:</span>
+            <div class="digit"><div class="strip" data-pos="s10"></div></div>
+            <div class="digit"><div class="strip" data-pos="s1"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right edge minute timeline -->
+      <aside class="timeline" aria-hidden="true">
+        <span class="timeline-label" id="tlabel">25</span>
+        <div class="timeline-track" id="track"></div>
+      </aside>
+
+      <!-- Live region for assistive tech -->
+      <p class="sr-only" id="sr-time" aria-live="polite" aria-atomic="true">25 minutes</p>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
