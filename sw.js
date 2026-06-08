@@ -1,5 +1,5 @@
 /* Pomodoro — offline service worker (network-first for fresh deploys) */
-const VERSION = "pomodoro-v4";
+const VERSION = "pomodoro-v5";
 const CORE = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const CORE = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon.svg",
+  "./tone.mp3",
 ];
 
 self.addEventListener("install", (event) => {

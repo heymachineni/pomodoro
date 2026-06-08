@@ -27,6 +27,10 @@
   const HINT_FADE_MS = 600;
 
   let hintHoldTimer = 0;
+  let audioUnlocked = false;
+
+  const completionTone = new Audio("./tone.mp3");
+  completionTone.preload = "auto";
 
   const touchPrimary =
     window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
@@ -209,7 +213,33 @@
     if (mode === "idle") showIdleTimerHint();
   }
 
-  function enterIdle() {
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    const attempt = completionTone.play();
+    if (!attempt) {
+      audioUnlocked = true;
+      return;
+    }
+    attempt
+      .then(() => {
+        completionTone.pause();
+        completionTone.currentTime = 0;
+        audioUnlocked = true;
+      })
+      .catch(() => {});
+  }
+
+  function stopCompletionTone() {
+    completionTone.pause();
+    completionTone.currentTime = 0;
+  }
+
+  function playCompletionTone() {
+    stopCompletionTone();
+    completionTone.play().catch(() => {});
+  }
+
+  function enterIdle({ playTone = false } = {}) {
     durationMs = 0;
     remainingMs = 0;
     endAt = 0;
@@ -217,10 +247,12 @@
     setDigits(0);
     setBorderProgress(0);
     srTime.textContent = "Idle.";
+    if (playTone) playCompletionTone();
   }
 
   function startTimer(minutes) {
     if (minutes < 1) return;
+    stopCompletionTone();
     durationMs = minutes * 60_000;
     remainingMs = durationMs;
     endAt = performance.now() + remainingMs;
@@ -229,7 +261,8 @@
   }
 
   function finishCountdown() {
-    enterIdle();
+    if (mode !== "running") return;
+    enterIdle({ playTone: true });
     paintTimeline();
     srTime.textContent = "Timer complete.";
   }
@@ -248,6 +281,7 @@
 
   function adjust(delta) {
     requestImmersive();
+    stopCompletionTone();
 
     const cur = minutesValue();
     const next = cur + delta;
@@ -533,6 +567,8 @@
   }
 
   function requestImmersive() {
+    unlockAudio();
+
     if (isFullscreen()) {
       enableImmersiveLayout();
       return;
