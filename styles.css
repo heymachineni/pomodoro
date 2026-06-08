@@ -202,8 +202,8 @@ body[data-state="idle"] .time {
   transform: translateY(-0.03em);
 }
 
-/* Pause hint — below timer, out of flow so digits stay centered */
-.pause-hint {
+/* Timer hint — below digits, out of flow */
+.timer-hint {
   position: absolute;
   top: 100%;
   left: 50%;
@@ -217,29 +217,39 @@ body[data-state="idle"] .time {
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 600ms var(--ease);
 }
 
-body[data-state="running"] .pause-hint {
+.timer-hint.is-visible {
+  opacity: 1;
+}
+
+.timer-hint.is-fading {
+  opacity: 0;
+}
+
+.timer-hint > span {
   display: none;
 }
 
-.pause-hint-touch,
-.pause-hint-keyboard {
-  display: none;
-}
-
-body[data-state="idle"] .pause-hint-resume,
-body[data-state="paused"] .pause-hint-pause {
-  display: none;
-}
-
-html.touch-primary body[data-state="idle"] .pause-hint-touch.pause-hint-pause,
-html.touch-primary body[data-state="paused"] .pause-hint-touch.pause-hint-resume {
+html.touch-primary .timer-hint[data-hint="idle"] .timer-hint-idle {
   display: inline;
 }
 
-html:not(.touch-primary) body[data-state="idle"] .pause-hint-keyboard.pause-hint-pause,
-html:not(.touch-primary) body[data-state="paused"] .pause-hint-keyboard.pause-hint-resume {
+html.touch-primary .timer-hint[data-hint="pause"] .timer-hint-touch.timer-hint-pause {
+  display: inline;
+}
+
+html.touch-primary .timer-hint[data-hint="resume"] .timer-hint-touch.timer-hint-resume {
+  display: inline;
+}
+
+html:not(.touch-primary) .timer-hint[data-hint="pause"] .timer-hint-keyboard.timer-hint-pause {
+  display: inline;
+}
+
+html:not(.touch-primary) .timer-hint[data-hint="resume"] .timer-hint-keyboard.timer-hint-resume {
   display: inline;
 }
 
@@ -485,7 +495,7 @@ body[data-bump="down"] .time {
   .timeline-label.is-hint .hint-line + .hint-line::before {
     content: none;
   }
-  .pause-hint {
+  .timer-hint {
     font-size: 9px;
   }
   .tick {

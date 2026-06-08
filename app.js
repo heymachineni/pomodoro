@@ -7,7 +7,6 @@
 
   const MIN_MINUTES = 0;
   const MAX_MINUTES = 60;
-  const STORAGE_KEY = "pomodoro.duration";
 
   const STROKE = 8;
   const EDGE_INSET = 8;
@@ -21,7 +20,13 @@
   const trackEl = document.getElementById("track");
   const timelineEl = document.querySelector(".timeline");
   const tlabel = document.getElementById("tlabel");
+  const timerHint = document.getElementById("timer-hint");
   const srTime = document.getElementById("sr-time");
+
+  const HINT_HOLD_MS = 2500;
+  const HINT_FADE_MS = 600;
+
+  let hintHoldTimer = 0;
 
   const touchPrimary =
     window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
@@ -40,12 +45,6 @@
 
   /** @type {WakeLockSentinel|null} */
   let wakeLock = null;
-
-  function saveDuration(min) {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(min));
-    } catch (_) {}
-  }
 
   function buildPerimeter(w, h) {
     const inset = EDGE_INSET + STROKE / 2;
@@ -143,10 +142,71 @@
   }
 
   function setMode(next) {
+    const prev = mode;
     mode = next;
     body.dataset.state = next;
     if (next === "running") acquireWakeLock();
     else releaseWakeLock();
+    syncTimerHint(prev, next);
+  }
+
+  function clearHintTimer() {
+    clearTimeout(hintHoldTimer);
+    hintHoldTimer = 0;
+  }
+
+  function hideTimerHint() {
+    clearHintTimer();
+    timerHint.classList.remove("is-visible", "is-fading");
+    timerHint.removeAttribute("data-hint");
+  }
+
+  function showIdleTimerHint() {
+    clearHintTimer();
+    if (!touchPrimary || mode !== "idle") {
+      hideTimerHint();
+      return;
+    }
+    timerHint.dataset.hint = "idle";
+    timerHint.classList.remove("is-fading");
+    timerHint.classList.add("is-visible");
+  }
+
+  function showTransientTimerHint(kind) {
+    clearHintTimer();
+    timerHint.dataset.hint = kind;
+    timerHint.classList.remove("is-fading");
+    void timerHint.offsetWidth;
+    timerHint.classList.add("is-visible");
+    hintHoldTimer = setTimeout(() => {
+      timerHint.classList.add("is-fading");
+    }, HINT_HOLD_MS);
+  }
+
+  function syncTimerHint(prev, next) {
+    if (next === "idle") {
+      showIdleTimerHint();
+      return;
+    }
+    if (next === "running" && prev !== "paused") {
+      showTransientTimerHint("pause");
+      return;
+    }
+    if (next === "paused") {
+      showTransientTimerHint("resume");
+      return;
+    }
+    if (next === "running" && prev === "paused") {
+      hideTimerHint();
+    }
+  }
+
+  function onTimerHintTransitionEnd(e) {
+    if (e.target !== timerHint || e.propertyName !== "opacity") return;
+    if (!timerHint.classList.contains("is-fading")) return;
+    timerHint.classList.remove("is-visible", "is-fading");
+    timerHint.removeAttribute("data-hint");
+    if (mode === "idle") showIdleTimerHint();
   }
 
   function enterIdle() {
@@ -156,7 +216,6 @@
     setMode("idle");
     setDigits(0);
     setBorderProgress(0);
-    saveDuration(0);
     srTime.textContent = "Idle.";
   }
 
@@ -166,7 +225,6 @@
     remainingMs = durationMs;
     endAt = performance.now() + remainingMs;
     setMode("running");
-    saveDuration(minutes);
     srTime.textContent = `${minutes} minutes.`;
   }
 
@@ -230,7 +288,6 @@
       return;
     }
 
-    saveDuration(next);
     haptic(6);
     paintTimeline();
     srTime.textContent = `${next} minutes.`;
@@ -432,6 +489,7 @@
   window.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
   stage.addEventListener("selectstart", (e) => e.preventDefault());
+  timerHint.addEventListener("transitionend", onTimerHintTransitionEnd);
 
   // ---- Resize --------------------------------------------------------- //
 
@@ -458,6 +516,15 @@
       document.fullscreenElement ||
       document.webkitFullscreenElement ||
       document.msFullscreenElement
+    );
+  }
+
+  function isStandalonePWA() {
+    return (
+      /** @type {Window & { navigator: Navigator & { standalone?: boolean } }} */ (
+        window
+      ).navigator.standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches
     );
   }
 
@@ -563,6 +630,12 @@
 
   function init() {
     window.scrollTo(0, 0);
+
+    try {
+      localStorage.removeItem("pomodoro.duration");
+    } catch (_) {}
+
+    if (isStandalonePWA()) enableImmersiveLayout();
 
     enterIdle();
     buildTimeline();
