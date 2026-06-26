@@ -1,5 +1,5 @@
 /* Pomodoro — offline service worker (network-first for fresh deploys) */
-const VERSION = "pomodoro-v5";
+const VERSION = "pomodoro-v6";
 const CORE = [
   "./",
   "./index.html",

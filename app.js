@@ -8,9 +8,11 @@
   const MIN_MINUTES = 0;
   const MAX_MINUTES = 60;
 
-  const STROKE = 8;
   const EDGE_INSET = 8;
   const CORNER_RADIUS = 26;
+  const TONE_SRC = "./tone.mp3";
+  const SILENT_WAV =
+    "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==";
 
   const body = document.body;
   const stage = document.querySelector(".stage");
@@ -29,8 +31,8 @@
   let hintHoldTimer = 0;
   let audioUnlocked = false;
 
-  const completionTone = new Audio("./tone.mp3");
-  completionTone.preload = "auto";
+  const completionTone = new Audio(TONE_SRC);
+  completionTone.preload = "metadata";
 
   const touchPrimary =
     window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
@@ -50,8 +52,17 @@
   /** @type {WakeLockSentinel|null} */
   let wakeLock = null;
 
+  function strokeWidth() {
+    const raw = getComputedStyle(document.documentElement)
+      .getPropertyValue("--stroke")
+      .trim();
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n > 0 ? n : 8;
+  }
+
   function buildPerimeter(w, h) {
-    const inset = EDGE_INSET + STROKE / 2;
+    const stroke = strokeWidth();
+    const inset = EDGE_INSET + stroke / 2;
     const r = Math.min(CORNER_RADIUS, Math.min(w, h) / 2 - inset - 4);
     const x0 = inset;
     const y0 = inset;
@@ -215,8 +226,19 @@
 
   function unlockAudio() {
     if (audioUnlocked) return;
+
+    try {
+      const nav = /** @type {Navigator & { audioSession?: { type: string } }} */ (
+        navigator
+      );
+      if (nav.audioSession) nav.audioSession.type = "playback";
+    } catch (_) {}
+
+    completionTone.src = SILENT_WAV;
     const attempt = completionTone.play();
     if (!attempt) {
+      completionTone.src = TONE_SRC;
+      completionTone.load();
       audioUnlocked = true;
       return;
     }
@@ -224,9 +246,14 @@
       .then(() => {
         completionTone.pause();
         completionTone.currentTime = 0;
+        completionTone.src = TONE_SRC;
+        completionTone.load();
         audioUnlocked = true;
       })
-      .catch(() => {});
+      .catch(() => {
+        completionTone.src = TONE_SRC;
+        completionTone.load();
+      });
   }
 
   function stopCompletionTone() {
@@ -235,7 +262,12 @@
   }
 
   function playCompletionTone() {
+    if (!audioUnlocked) return;
     stopCompletionTone();
+    if (!completionTone.src.includes("tone.mp3")) {
+      completionTone.src = TONE_SRC;
+      completionTone.load();
+    }
     completionTone.play().catch(() => {});
   }
 
@@ -470,6 +502,7 @@
 
   function onTouchStart(e) {
     if (e.touches.length !== 1) return;
+    unlockAudio();
     requestImmersive();
     touchStartY = e.touches[0].clientY;
     touchStartX = e.touches[0].clientX;
