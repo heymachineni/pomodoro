@@ -16,7 +16,8 @@
 
   --stroke: 8px;
   --edge-inset: 8px;
-  --frame-inset: calc(var(--edge-inset) + var(--stroke) / 2);
+  /* Tick ends meet the inner edge of the perimeter stroke (not its centerline). */
+  --timeline-inset: calc(var(--edge-inset) + var(--stroke));
   --time-size: clamp(96px, 20vw, 280px);
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -279,7 +280,7 @@ html:not(.touch-primary) .timer-hint[data-hint="resume"] .timer-hint-keyboard.ti
   position: absolute;
   top: 0;
   bottom: 0;
-  right: var(--frame-inset);
+  right: var(--timeline-inset);
   width: 168px;
   z-index: 3;
   pointer-events: none;
